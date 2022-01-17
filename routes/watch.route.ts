@@ -37,13 +37,20 @@ router.get('/get', async function(req, res, next) {
 
     const watchListCounted = watchList.map(watch => {
       let currentEpisode: number;
+      let nextAired: number | null;
       const start = moment(watch.start);
       const now = moment();
       const diffWeek = now.diff(start, 'week');
       if (watch.totalEpisode) {
         const episode = diffWeek + 1;
-        if (episode <= watch.totalEpisode) currentEpisode = episode;
-        else currentEpisode = watch.totalEpisode;
+        if (episode <= watch.totalEpisode) {
+          currentEpisode = episode;
+          if (episode <= watch.totalEpisode - 1) nextAired = start.add(diffWeek + 1, 'week').valueOf();
+          else nextAired = null;
+        } else {
+          currentEpisode = watch.totalEpisode;
+          nextAired = null;
+        }
       }
 
       else if (watch.end) {
@@ -54,11 +61,18 @@ router.get('/get', async function(req, res, next) {
           const diffWeekWithEnd = end.diff(start, 'week');
           currentEpisode = diffWeekWithEnd + 1;
         }
+
+        const _nextAired = start.add(diffWeek + 1, 'week');
+        if (_nextAired.isBefore(end)) nextAired = _nextAired.valueOf();
+        else nextAired = null;
       }
 
-      else currentEpisode = diffWeek + 1;
+      else {
+        currentEpisode = diffWeek + 1;
+        nextAired = start.add(diffWeek + 1, 'week').valueOf();
+      }
 
-      return { ...watch, currentEpisode };
+      return { ...watch, currentEpisode, nextAired };
     })
 
     return res.json({
